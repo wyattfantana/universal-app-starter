@@ -1,0 +1,40 @@
+{
+  "name": "quotemaster-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "dev:web": "turbo dev --filter=web",
+    "dev:api": "turbo dev --filter=api",
+    "dev:desktop": "turbo dev --filter=desktop",
+    "build:web": "turbo build --filter=web",
+    "build:api": "turbo build --filter=api",
+    "build:desktop": "turbo build --filter=desktop",
+    "mobile:ios:init": "npm run ios:init --workspace=desktop",
+    "mobile:ios:dev": "npm run ios:dev --workspace=desktop",
+    "mobile:ios:build": "npm run ios:build --workspace=desktop",
+    "mobile:android:init": "npm run android:init --workspace=desktop",
+    "mobile:android:dev": "npm run android:dev --workspace=desktop",
+    "mobile:android:build": "npm run android:build --workspace=desktop"
+  },
+  "devDependencies": {
+    "@total-typescript/ts-reset": "^0.6.1",
+    "prettier": "^3.3.3",
+    "turbo": "^2.3.3",
+    "type-fest": "^5.2.0",
+    "typescript": "~5.8.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.0"
+}

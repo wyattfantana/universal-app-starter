@@ -1,0 +1,28 @@
+{
+  "name": "@repo/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./schema.ts",
+    "./jobs": "./jobs.ts"
+  },
+  "scripts": {
+    "migrate": "node -r esbuild-register migrations/run.ts",
+    "worker": "node -r esbuild-register worker.ts"
+  },
+  "dependencies": {
+    "@repo/types": "file:../types",
+    "pg": "^8.13.1",
+    "pg-boss": "^10.1.5"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "esbuild": "^0.24.2",
+    "esbuild-register": "^3.6.0",
+    "typescript": "~5.8.3"
+  }
+}
