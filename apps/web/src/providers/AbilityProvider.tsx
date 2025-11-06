@@ -1,7 +1,7 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { AbilityContext } from '../lib/ability-context';
-import { defineAbilitiesFor, AppAbility, UserRole } from '../lib/ability';
+import { defineAbilitiesFor, type AppAbility, type UserRole } from '../lib/ability';
 
 interface Props {
   children: ReactNode;

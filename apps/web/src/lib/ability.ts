@@ -1,4 +1,4 @@
-import { AbilityBuilder, Ability, AbilityClass } from '@casl/ability';
+import { AbilityBuilder, Ability, type AbilityClass } from '@casl/ability';
 
 // Define actions and subjects
 type Actions = 'create' | 'read' | 'update' | 'delete' | 'manage';

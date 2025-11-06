@@ -1,40 +1,148 @@
 import express from 'express';
-import { getAllProducts, getProductById, searchProducts } from '@repo/database/schema';
+import { z } from 'zod';
+import { AppDataSource } from '../data-source.js';
+import { Product } from '../entities/Product.js';
+import { requireAuth } from '../middleware/clerk.js';
+import { ILike } from 'typeorm';
 
 export const productsRouter = express.Router();
 
-productsRouter.get('/', async (req, res) => {
-  try {
-    const { search } = req.query;
+// Zod schemas
+const createProductSchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional().nullable(),
+  sku: z.string().max(100).optional().nullable(),
+  price: z.number().min(0),
+  category: z.string().max(50).optional().nullable(),
+});
 
-    if (search && typeof search === 'string') {
-      const products = await searchProducts(search);
-      return res.json({ data: products });
+const updateProductSchema = createProductSchema.partial();
+
+// GET /api/products - List products with optional search
+productsRouter.get('/', requireAuth, async (req, res, next) => {
+  try {
+    const userId = (req as any).userId;
+    const search = req.query.search as string | undefined;
+    const productRepo = AppDataSource.getRepository(Product);
+
+    let where: any = { user_id: userId };
+
+    // Search functionality
+    if (search) {
+      where = [
+        { user_id: userId, name: ILike(`%${search}%`) },
+        { user_id: userId, description: ILike(`%${search}%`) },
+      ];
     }
 
-    const products = await getAllProducts();
+    const products = await productRepo.find({
+      where,
+      order: { created_at: 'DESC' },
+    });
+
     res.json({ data: products });
   } catch (error) {
-    console.error('Failed to fetch products:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    next(error);
   }
 });
 
-productsRouter.get('/:id', async (req, res) => {
+// GET /api/products/:id
+productsRouter.get('/:id', requireAuth, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid product ID' });
-    }
+    const userId = (req as any).userId;
+    const productId = parseInt(req.params.id);
+    const productRepo = AppDataSource.getRepository(Product);
 
-    const product = await getProductById(id);
+    const product = await productRepo.findOne({
+      where: { id: productId, user_id: userId },
+    });
+
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
     res.json({ data: product });
   } catch (error) {
-    console.error('Failed to fetch product:', error);
-    res.status(500).json({ error: 'Failed to fetch product' });
+    next(error);
+  }
+});
+
+// POST /api/products
+productsRouter.post('/', requireAuth, async (req, res, next) => {
+  try {
+    const userId = (req as any).userId;
+
+    const result = createProductSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: result.error.flatten()
+      });
+    }
+
+    const productRepo = AppDataSource.getRepository(Product);
+    const product = productRepo.create({
+      ...result.data,
+      user_id: userId,
+    });
+
+    await productRepo.save(product);
+    res.status(201).json({ data: product });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/products/:id
+productsRouter.put('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const userId = (req as any).userId;
+    const productId = parseInt(req.params.id);
+
+    const result = updateProductSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: result.error.flatten()
+      });
+    }
+
+    const productRepo = AppDataSource.getRepository(Product);
+    const product = await productRepo.findOne({
+      where: { id: productId, user_id: userId },
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    Object.assign(product, result.data);
+    await productRepo.save(product);
+
+    res.json({ data: product });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/products/:id
+productsRouter.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const userId = (req as any).userId;
+    const productId = parseInt(req.params.id);
+    const productRepo = AppDataSource.getRepository(Product);
+
+    const result = await productRepo.delete({
+      id: productId,
+      user_id: userId,
+    });
+
+    if (result.affected === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
   }
 });

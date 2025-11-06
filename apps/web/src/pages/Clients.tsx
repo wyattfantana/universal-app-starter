@@ -1,11 +1,19 @@
 import { Button } from '@repo/ui';
-import { trpc } from '../lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
 
 export function Clients() {
-  const { data, isLoading, error } = trpc.clients.list.useQuery();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const result = await api.getClients();
+      if (result.error) throw new Error(result.error);
+      return result.data || [];
+    },
+  });
 
   if (isLoading) return <div>Loading clients...</div>;
-  if (error) return <div>Error loading clients: {error.message}</div>;
+  if (error) return <div>Error loading clients: {(error as Error).message}</div>;
 
   return (
     <div>
