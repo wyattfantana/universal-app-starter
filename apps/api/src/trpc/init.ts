@@ -6,7 +6,3 @@ const t = initTRPC.context<Context>().create();
 export const router = t.router;
 export const middleware = t.middleware;
 export const publicProcedure = t.procedure;
-
-// Import auth middleware
-import { enforceAuth } from './middleware/auth';
-export const protectedProcedure = t.procedure.use(enforceAuth);

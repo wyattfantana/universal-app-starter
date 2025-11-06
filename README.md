@@ -1,317 +1,336 @@
-# Universal App Starter Template
+# QuoteMaster
 
-A production-ready monorepo template for building universal applications with **Web**, **Desktop**, **iOS**, and **Android** from a single codebase.
+Professional estimate and invoice management system with universal app support (web + desktop).
 
-## 🚀 Tech Stack
+## 🏗️ Architecture
 
-### Frontend
-- **Vite** + React 19 + TypeScript
-- **React Router** - Client-side routing
-- **TanStack Query** - Data fetching
-- **Tailwind CSS** - Styling
-- **Tauri v2** - Desktop & Mobile apps
-
-### Backend
-- **Express.js** - REST API server
-- **tRPC** - Type-safe API (fully configured!)
-- **PostgreSQL** - Primary database
-- **pg-boss** - Background job queue (no Redis needed!)
-
-### Production Tools (All Pre-configured!)
-- ✅ **Clerk** - Authentication
-- ✅ **CASL** - Authorization
-- ✅ **Sentry** - Error tracking
-- ✅ **PostHog** - Analytics
-- ✅ **Resend + React Email** - Email system
-- ✅ **Stripe** - Payments
-- ✅ **Vitest** - Unit testing
-- ✅ **Playwright** - E2E testing
-
-### DevOps
-- **Turbo Repo** - Monorepo build system
-- **npm workspaces** - Package management
-- **TypeScript** - End-to-end type safety
-
-## 📦 What's Included
+QuoteMaster is built as a **Turbo Repo monorepo** with shared packages for maximum code reuse across platforms:
 
 ```
-starter-template/
+quotemaster/
 ├── apps/
-│   ├── web/              # Vite + React web app
-│   ├── api/              # Express API with tRPC
-│   └── desktop/          # Tauri (Desktop + Mobile)
+│   ├── web/              # Vite + React web application
+│   ├── api/              # Express.js REST API server
+│   └── desktop/          # Tauri v2 (Windows, macOS, Linux, iOS, Android)
 ├── packages/
 │   ├── ui/               # Shared React components
 │   ├── types/            # Shared TypeScript types
-│   ├── database/         # PostgreSQL + pg-boss
-│   └── config/           # Shared configs
-└── scripts/
-    └── setup-production.sh  # Install all tools
+│   ├── config/           # Shared configuration (TS, Tailwind)
+│   └── database/         # PostgreSQL client + pg-boss job queue
+└── turbo.json            # Monorepo build pipeline
 ```
 
-## ⚡ Quick Start
+### Platform Support
 
-### 1. Use This Template
+- ✅ **Web** - Browser-based (Vite + React)
+- ✅ **API** - RESTful API (Express.js)
+- ✅ **Desktop** - Windows, macOS, Linux (Tauri)
+- ✅ **Mobile** - iOS and Android (Tauri Mobile)
 
-Click "Use this template" on GitHub or:
+## ✨ Features
+
+- **Client Management** - Track clients with contact details
+- **Smart Estimates** - Create professional estimates with line items
+- **Invoice Tracking** - Generate invoices and monitor payments
+- **Product Catalog** - Maintain products with web scraping support
+- **Background Jobs** - Email sending, PDF generation, web scraping (pg-boss)
+- **Revenue Analytics** - Dashboard with charts and insights
+- **Universal Apps** - Same codebase for web, desktop, and mobile
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Web**: Vite + React 19 + TypeScript + React Router
+- **Desktop/Mobile**: Tauri v2 + React 19 + Vite
+- **Styling**: Tailwind CSS
+- **State**: Zustand + TanStack Query
+
+### Backend
+- **API**: Express.js + TypeScript
+- **Database**: PostgreSQL 16+
+- **Job Queue**: pg-boss (PostgreSQL-based, no Redis needed!)
+- **ORM**: Custom query helpers with `pg`
+
+### DevOps
+- **Monorepo**: Turbo Repo
+- **Package Manager**: npm workspaces
+- **Hosting**: Hetzner VPS (Germany - GDPR compliant)
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 20+ and npm 10+
+- PostgreSQL 16+
+- Rust 1.91+ (for Tauri apps)
+
+**For mobile development (optional):**
+- iOS: macOS + Xcode 14+
+- Android: Android Studio + SDK (API 24+)
+- See [MOBILE_SETUP.md](./MOBILE_SETUP.md) for details
+
+### 1. Clone and Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git my-app
-cd my-app
+cd /home/dwdec/Projects/quotemaster
 npm install
 ```
 
-### 2. Set Up Environment
+This installs dependencies for all apps and packages using npm workspaces.
+
+### 2. Database Setup
+
+Create a PostgreSQL database:
 
 ```bash
-# Copy environment files
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-
-# Edit with your database credentials
+createdb quotemaster
 ```
 
-### 3. Create Database
+Set environment variables:
+
+**For API server** (create `.env` in `apps/api/`):
+```bash
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=quotemaster
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+```
+
+**For web app** (create `.env` in `apps/web/`):
+```bash
+VITE_API_URL=http://localhost:3001
+```
+
+Run migrations:
 
 ```bash
-createdb myapp
 cd packages/database
 npm run migrate
 ```
 
-### 4. Start Development
+### 3. Start Development
+
+**Option A: Run everything (recommended)**
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:5173 - Done! 🎉
+This starts:
+- Web app on `http://localhost:5173` (Vite)
+- API server on `http://localhost:3001` (Express)
+- Desktop app (Tauri)
+- All in watch mode with hot reload
 
-## 🎯 What Works Out of the Box
-
-### ✅ Ready to Use (No Setup)
-- **tRPC** - Type-safe API with full autocomplete
-- **Tailwind CSS** - Utility-first styling
-- **React Router** - Client-side routing
-- **TanStack Query** - Data fetching
-- **Vitest** - Unit testing
-- **Playwright** - E2E testing
-
-### ⏳ Ready to Activate (Add API Keys)
-- **Clerk** - Authentication (15 min)
-- **CASL** - Authorization (works with Clerk)
-- **Sentry** - Error tracking (5 min)
-- **PostHog** - Analytics (10 min)
-- **Resend** - Email system (10 min)
-- **Stripe** - Payments (as needed)
-
-## 📱 Platform Support
-
-- ✅ **Web** - Modern browsers via Vite
-- ✅ **Desktop** - Windows, macOS, Linux via Tauri
-- ✅ **iOS** - iPhone & iPad via Tauri Mobile
-- ✅ **Android** - Phone & Tablet via Tauri Mobile
-
-## 🏗️ Architecture Highlights
-
-### Type-Safe API with tRPC
-
-No more manual type definitions! tRPC provides full type safety from API to UI:
-
-```typescript
-// API (apps/api/src/trpc/routers/users.ts)
-export const usersRouter = router({
-  list: publicProcedure.query(async () => {
-    return await getUsers();
-  }),
-});
-
-// Web (apps/web/src/pages/Users.tsx)
-const { data } = trpc.users.list.useQuery();
-// ↑ Fully typed, with autocomplete!
-```
-
-### Shared Components
-
-UI components work across web, desktop, and mobile:
-
-```typescript
-// packages/ui/button.tsx
-export function Button({ children, ...props }) {
-  return <button className="btn" {...props}>{children}</button>;
-}
-
-// Use anywhere!
-import { Button } from '@repo/ui';
-```
-
-### Background Jobs (No Redis!)
-
-pg-boss uses PostgreSQL for job queues:
-
-```typescript
-await boss.send('send-email', {
-  to: 'user@example.com',
-  subject: 'Welcome!',
-});
-```
-
-## 📚 Documentation
-
-- **`QUICKSTART.md`** - 5-minute setup guide
-- **`PRODUCTION_SETUP.md`** - Configure all production tools
-- **`MOBILE_SETUP.md`** - iOS and Android setup
-- **`README.md`** - Full project overview
-
-## 🧪 Testing
+**Option B: Run web only**
 
 ```bash
-# Unit tests
-npm run test
-
-# E2E tests
-npm run test:e2e
-
-# Coverage
-npm run test:coverage
+npm run dev:web
 ```
 
-## 📦 Building for Production
+**Option C: Run API server only**
 
 ```bash
-# Build everything
+npm run dev:api
+```
+
+**Option D: Run desktop only**
+
+```bash
+npm run dev:desktop
+```
+
+### 4. Start Background Worker (Optional)
+
+For background jobs (emails, PDF generation, web scraping):
+
+```bash
+cd packages/database
+npm run worker
+```
+
+## 📦 Project Structure
+
+### Apps
+
+#### `apps/web` - Vite React Web App
+- Production-ready web application
+- Built with Vite + React + TypeScript
+- React Router for client-side routing
+- Calls the Express API server
+- TanStack Query for data fetching
+
+#### `apps/api` - Express REST API
+- TypeScript-based REST API server
+- Connects to PostgreSQL database
+- pg-boss job queue integration
+- CORS-enabled for web and desktop clients
+- Health check and monitoring endpoints
+
+#### `apps/desktop` - Tauri Universal App
+- Native desktop application (Windows, macOS, Linux)
+- **Mobile apps** (iOS and Android) from the same codebase
+- Calls the Express API server
+- Uses shared UI components
+- Local-first option available (with SQLite)
+
+### Packages
+
+#### `@repo/ui`
+Shared React components used across web and desktop:
+- `Button`, `Input`, `Modal`, `TextArea`
+- Consistent styling with Tailwind CSS
+
+#### `@repo/types`
+TypeScript types for:
+- Database models (Client, Estimate, Invoice, Product, etc.)
+- API request/response types
+- Job queue payloads
+
+#### `@repo/database`
+PostgreSQL client and utilities:
+- Connection pooling (`pg`)
+- Query helpers and schema functions
+- pg-boss job queue integration
+- Migration scripts
+
+#### `@repo/config`
+Shared configuration:
+- TypeScript config (`tsconfig.base.json`)
+- Tailwind config with brand colors
+
+## 🎯 Key Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start all apps in development mode |
+| `npm run build` | Build all apps for production |
+| `npm run dev:web` | Start web app only (port 5173) |
+| `npm run dev:api` | Start API server only (port 3001) |
+| `npm run dev:desktop` | Start desktop app only |
+| `npm run lint` | Lint all packages |
+| `npm run clean` | Clean build artifacts |
+
+### Mobile Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run mobile:ios:init` | Initialize iOS project (one-time) |
+| `npm run mobile:ios:dev` | Run iOS app in simulator |
+| `npm run mobile:ios:build` | Build iOS app for release |
+| `npm run mobile:android:init` | Initialize Android project (one-time) |
+| `npm run mobile:android:dev` | Run Android app in emulator |
+| `npm run mobile:android:build` | Build Android APK for release |
+
+See [MOBILE_SETUP.md](./MOBILE_SETUP.md) for complete mobile development guide.
+
+## 🔧 Database Operations
+
+```bash
+# Run migrations
+cd packages/database
+npm run migrate
+
+# Start background worker
+npm run worker
+
+# Check API health
+curl http://localhost:3001/health
+
+# Check clients endpoint
+curl http://localhost:3001/api/clients
+```
+
+## 🌐 Deployment
+
+### Web App + API (VPS)
+
+1. Set up PostgreSQL on Hetzner VPS (Germany)
+2. Set environment variables for API and web
+3. Build and deploy API server:
+
+```bash
+cd apps/api
 npm run build
-
-# Or build individually
-npm run build:web      # Web app
-npm run build:api      # API server
-npm run build:desktop  # Desktop app
+npm start
 ```
 
-## 📱 Mobile Development
+4. Build and serve web app:
 
 ```bash
-# iOS
-npm run mobile:ios:init    # One-time setup
-npm run mobile:ios:dev     # Run in simulator
-
-# Android
-npm run mobile:android:init  # One-time setup
-npm run mobile:android:dev   # Run in emulator
+cd apps/web
+npm run build
+# Serve the dist folder with nginx or a static file server
 ```
 
-See `MOBILE_SETUP.md` for complete instructions.
-
-## 🔐 Environment Variables
-
-### Required (Basic Functionality)
-```bash
-# Database
-POSTGRES_HOST=localhost
-POSTGRES_DB=myapp
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=***
-
-# API URL
-VITE_API_URL=http://localhost:3001
-```
-
-### Optional (Production Features)
-```bash
-# Authentication
-CLERK_SECRET_KEY=sk_***
-VITE_CLERK_PUBLISHABLE_KEY=pk_***
-
-# Error Tracking
-SENTRY_DSN=https://***
-VITE_SENTRY_DSN=https://***
-
-# Analytics
-VITE_POSTHOG_KEY=phc_***
-
-# Email
-RESEND_API_KEY=re_***
-
-# Payments
-STRIPE_SECRET_KEY=sk_***
-VITE_STRIPE_PUBLISHABLE_KEY=pk_***
-```
-
-## 🎨 Customization
-
-### 1. Rename Your App
-
-Update `name` in all `package.json` files:
-- `apps/web/package.json`
-- `apps/api/package.json`
-- `apps/desktop/package.json`
-- `packages/*/package.json`
-
-### 2. Update Branding
-
-- **Logo**: Replace `apps/web/public/logo.svg`
-- **Colors**: Edit `apps/web/tailwind.config.js`
-- **Fonts**: Edit `apps/web/src/index.css`
-
-### 3. Add Your Schema
-
-- Edit `packages/database/schema.sql`
-- Run `npm run migrate` in `packages/database`
-
-## 🔧 Troubleshooting
-
-### Port Already in Use
-```bash
-# Kill process on port
-lsof -ti:3001 | xargs kill -9  # API
-lsof -ti:5173 | xargs kill -9  # Web
-```
-
-### Database Connection Error
-```bash
-# Check PostgreSQL is running
-pg_isready
-
-# Start if needed
-sudo systemctl start postgresql  # Linux
-brew services start postgresql   # macOS
-```
-
-### Module Not Found
-```bash
-# Reinstall dependencies
-rm -rf node_modules package-lock.json
-npm install
-```
-
-## 🤝 Contributing
-
-This is a template - fork it and make it your own!
-
-## 📄 License
-
-MIT License - Use this template for any project (personal or commercial).
-
-## 🌟 Credits
-
-Built with:
-- [Vite](https://vitejs.dev)
-- [React](https://react.dev)
-- [Tauri](https://tauri.app)
-- [tRPC](https://trpc.io)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Clerk](https://clerk.com)
-- [Sentry](https://sentry.io)
-- [PostHog](https://posthog.com)
-- [Resend](https://resend.com)
-
----
-
-## 🚀 Ready to Build?
+5. Run background worker as a service:
 
 ```bash
-npm install
-npm run dev
+cd packages/database
+npm run worker
 ```
 
-That's it! Start building your universal app! 🎉
+Use PM2 or systemd to keep processes running. Configure nginx as a reverse proxy for the API.
+
+### Desktop App
+
+Build platform-specific binaries:
+
+```bash
+cd apps/desktop
+npm run tauri build
+```
+
+Binaries will be in `src-tauri/target/release/bundle/`.
+
+### Mobile Apps
+
+See [MOBILE_SETUP.md](./MOBILE_SETUP.md) for iOS and Android setup and deployment.
+
+## 📚 API Documentation
+
+API server runs on `http://localhost:3001` in development.
+
+### Health Check
+```
+GET /health
+```
+
+### Clients
+```
+GET    /api/clients          # Get all clients
+GET    /api/clients/:id      # Get client by ID
+POST   /api/clients          # Create new client
+PATCH  /api/clients/:id      # Update client
+DELETE /api/clients/:id      # Delete client
+```
+
+### Estimates
+```
+GET    /api/estimates        # Get all estimates
+GET    /api/estimates/:id    # Get estimate by ID
+```
+
+### Invoices
+```
+GET    /api/invoices         # Get all invoices
+GET    /api/invoices/:id     # Get invoice by ID
+```
+
+### Products
+```
+GET    /api/products         # Get all products
+GET    /api/products/search?q=term  # Search products
+```
+
+## 🛡️ Security & GDPR
+
+- Customer data stored in EU (Hetzner Germany)
+- PostgreSQL with proper access controls
+- Environment variables for sensitive config
+- HTTPS required in production
+
+## 📞 Support
+
+For issues or questions, open an issue in the repository.
