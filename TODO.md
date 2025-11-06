@@ -1,6 +1,6 @@
-# QuoteMaster - TODO List
+# Universal App Starter - TODO List
 
-Items to implement later as the project scales.
+Recommended features to implement as your application scales.
 
 ---
 

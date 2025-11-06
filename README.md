@@ -1,20 +1,21 @@
-# QuoteMaster
+# Universal App Starter
 
-Professional estimate and invoice management system with universal app support (web + desktop + mobile).
+Production-ready monorepo template for building universal applications (web + desktop + mobile) from a single codebase.
 
-**Architecture:** Express REST API + TypeORM + React + Tauri
+**Architecture:** Express REST API + TypeORM + React + Tauri + Worker
 
 ---
 
 ## 🏗️ Architecture
 
-QuoteMaster is built as a **Turbo Repo monorepo** with maximum code reuse:
+Built as a **Turbo Repo monorepo** with maximum code reuse:
 
 ```
-quotemaster/
+universal-app-starter/
 ├── apps/
 │   ├── web/              # Vite + React web application
 │   ├── api/              # Express.js REST API with TypeORM
+│   ├── worker/           # Background job processor (pg-boss)
 │   └── desktop/          # Tauri v2 (Windows, macOS, Linux, iOS, Android)
 ├── packages/
 │   ├── ui/               # Shared React components
@@ -35,11 +36,10 @@ quotemaster/
 ## ✨ Features
 
 ### Core Functionality
-- **Client Management** - Track clients with full contact details
-- **Estimates** - Create professional estimates with line items
-- **Invoices** - Generate invoices and monitor payments
-- **Product Catalog** - Maintain reusable products/services
-- **Multi-tenancy** - Complete user isolation (your data stays yours)
+- **TypeORM Entities** - Pre-configured with decorators and migrations
+- **REST API** - Express.js with input validation (Zod)
+- **Background Jobs** - Worker process using pg-boss (PostgreSQL-based queue)
+- **Multi-tenancy** - Complete user isolation built-in (your data stays yours)
 
 ### Security & Authentication
 - **Clerk Authentication** - Secure user management
@@ -108,7 +108,8 @@ See [MOBILE_SETUP.md](./MOBILE_SETUP.md) for mobile setup.
 ### 1. Clone and Install
 
 ```bash
-cd /home/dwdec/Projects/quotemaster
+git clone https://github.com/YOUR_USERNAME/universal-app-starter.git my-app
+cd my-app
 npm install
 ```
 
@@ -119,7 +120,7 @@ This installs all dependencies using npm workspaces.
 Create PostgreSQL database:
 
 ```bash
-createdb quotemaster
+createdb myapp
 ```
 
 ### 3. Configure Environment Variables
@@ -130,7 +131,7 @@ createdb quotemaster
 # Required - Database
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_DB=quotemaster
+POSTGRES_DB=myapp
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 
@@ -219,58 +220,28 @@ http://localhost:3001/api
 
 All API endpoints require authentication via Clerk. The web app automatically sends auth tokens in cookies.
 
-### Endpoints
+### Example Endpoints
 
-#### Clients
-
-```
-GET    /api/clients       - List all clients
-GET    /api/clients/:id   - Get single client
-POST   /api/clients       - Create client
-PUT    /api/clients/:id   - Update client
-DELETE /api/clients/:id   - Delete client
-```
-
-#### Products
+The template includes example CRUD endpoints. Replace with your own:
 
 ```
-GET    /api/products?search=keyword  - List/search products
-GET    /api/products/:id             - Get single product
-POST   /api/products                 - Create product
-PUT    /api/products/:id             - Update product
-DELETE /api/products/:id             - Delete product
-```
-
-#### Estimates
-
-```
-GET    /api/estimates     - List all estimates
-GET    /api/estimates/:id - Get estimate with items
-POST   /api/estimates     - Create estimate with items
-DELETE /api/estimates/:id - Delete estimate
-```
-
-#### Invoices
-
-```
-GET    /api/invoices      - List all invoices
-GET    /api/invoices/:id  - Get invoice with items
-POST   /api/invoices      - Create invoice with items
-DELETE /api/invoices/:id  - Delete invoice
+GET    /api/items         - List all items
+GET    /api/items/:id     - Get single item
+POST   /api/items         - Create item
+PUT    /api/items/:id     - Update item
+DELETE /api/items/:id     - Delete item
 ```
 
 ### Request/Response Format
 
-**Create Client Example:**
+**Create Item Example:**
 
 ```bash
-curl -X POST http://localhost:3001/api/clients \
+curl -X POST http://localhost:3001/api/items \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Acme Corp",
-    "email": "contact@acme.com",
-    "phone": "+1-555-0100",
-    "company": "Acme Corporation"
+    "name": "Example Item",
+    "description": "This is an example"
   }'
 ```
 
@@ -281,10 +252,8 @@ curl -X POST http://localhost:3001/api/clients \
   "data": {
     "id": 1,
     "user_id": "user_abc123",
-    "name": "Acme Corp",
-    "email": "contact@acme.com",
-    "phone": "+1-555-0100",
-    "company": "Acme Corporation",
+    "name": "Example Item",
+    "description": "This is an example",
     "created_at": "2025-11-06T10:00:00.000Z",
     "updated_at": "2025-11-06T10:00:00.000Z"
   }
@@ -342,21 +311,15 @@ Every database record includes `user_id` field. All queries automatically filter
 
 ### Schema
 
-QuoteMaster uses **PostgreSQL** with **TypeORM** for type-safe database access.
+Uses **PostgreSQL** with **TypeORM** for type-safe database access.
 
-**Main Tables:**
-- `clients` - Customer information
-- `estimates` + `estimate_items` - Estimates with line items
-- `invoices` + `invoice_items` - Invoices with line items
-- `products` - Reusable products/services catalog
-- `revenue` - Revenue tracking
-- `settings` - User-specific settings
-
-All tables include:
-- `user_id` (multi-tenancy)
-- Indexes on frequently queried columns
-- Proper foreign key constraints
+**Example Tables Included:**
+- Example entities with TypeORM decorators
+- Multi-tenancy support (`user_id` on all entities)
+- Proper indexes and foreign keys
 - Timestamps (`created_at`, `updated_at`)
+
+**Replace with your own entities!** The template provides examples you can modify or delete.
 
 ### Migrations
 
@@ -511,40 +474,45 @@ npm run lint:fix         # Auto-fix lint issues
 
 ---
 
-## 🎯 Project Status
+## 🎯 What's Included
 
-### ✅ Completed
-- Core CRUD operations (clients, products, estimates, invoices)
-- Authentication with Clerk
+### ✅ Ready to Use
+- Express REST API with TypeORM
+- Authentication with Clerk (optional)
 - Multi-tenancy (complete user isolation)
 - Input validation (Zod)
 - Database migrations (TypeORM)
-- Error tracking (Sentry)
-- Security hardening (CORS, helmet, error handling)
-- Database indexes
-- Connection pooling
-- Graceful shutdown
+- Error tracking (Sentry - optional)
+- Security hardening (CORS, Helmet, error handling)
+- Background worker (pg-boss)
+- Tauri desktop app
+- React web app with TanStack Query
 
-### 🚧 In Progress
-- Email system integration (Resend + React Email)
+### 🔧 Optional Integrations
+- Email system (Resend + React Email)
 - Payment processing (Stripe)
-- Analytics dashboard (PostHog)
+- Analytics (PostHog)
 
-### 📋 Planned (see TODO.md)
+### 📋 Recommended Additions (see TODO.md)
 - Pagination for large lists
 - Logging infrastructure (Pino)
 - API versioning
 - Soft deletes
 - Rate limiting
-- Request ID tracking
 
 ---
 
-## 🤝 Contributing
+## 🤝 Using This Template
 
-This is a template project - fork it and make it your own!
+### Quick Start
+1. Click "Use this template" on GitHub
+2. Clone your new repository
+3. Update `package.json` files with your app name
+4. Replace example entities with your own
+5. Start building!
 
-To contribute improvements back to the template:
+### Contributing Back
+To contribute improvements to the template:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
