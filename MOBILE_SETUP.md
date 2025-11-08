@@ -1,6 +1,6 @@
 # Mobile Development Setup
 
-This template supports iOS and Android via Tauri Mobile.
+QuoteMaster supports iOS and Android via Tauri Mobile.
 
 ## Prerequisites
 
@@ -90,7 +90,7 @@ npm run tauri android dev
 ## Troubleshooting
 
 ### iOS: Code signing errors
-- Open project in Xcode: `apps/desktop/gen/apple/YourApp.xcodeproj`
+- Open project in Xcode: `apps/desktop/gen/apple/QuoteMaster.xcodeproj`
 - Select your development team in Signing & Capabilities
 
 ### Android: Gradle errors

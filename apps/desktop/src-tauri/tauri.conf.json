@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "QuoteMaster",
+  "productName": "universal-app-starter",
   "version": "0.1.0",
-  "identifier": "com.dwdec.quotemaster",
+  "identifier": "com.dwdec.universal-app-starter",
   "build": {
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm run build",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "QuoteMaster",
+        "title": "universal-app-starter",
         "width": 800,
         "height": 600,
         "fullscreen": false,

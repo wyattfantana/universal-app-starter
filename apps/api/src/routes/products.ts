@@ -2,8 +2,9 @@ import express from 'express';
 import { z } from 'zod';
 import { AppDataSource } from '../data-source.js';
 import { Product } from '../entities/Product.js';
-import { requireAuth } from '../middleware/clerk.js';
+import { requireAuth } from '../middleware/auth.js';
 import { ILike } from 'typeorm';
+import { parsePaginationParams, createPaginationMeta } from '../types/pagination.js';
 
 export const productsRouter = express.Router();
 
@@ -18,12 +19,16 @@ const createProductSchema = z.object({
 
 const updateProductSchema = createProductSchema.partial();
 
-// GET /api/products - List products with optional search
+// GET /api/products - List products with optional search (with pagination)
 productsRouter.get('/', requireAuth, async (req, res, next) => {
   try {
     const userId = (req as any).userId;
     const search = req.query.search as string | undefined;
     const productRepo = AppDataSource.getRepository(Product);
+
+    // Parse pagination parameters
+    const { page, limit } = parsePaginationParams(req.query);
+    const skip = (page - 1) * limit;
 
     let where: any = { user_id: userId };
 
@@ -35,12 +40,17 @@ productsRouter.get('/', requireAuth, async (req, res, next) => {
       ];
     }
 
-    const products = await productRepo.find({
+    const [products, total] = await productRepo.findAndCount({
       where,
       order: { created_at: 'DESC' },
+      skip,
+      take: limit,
     });
 
-    res.json({ data: products });
+    res.json({
+      data: products,
+      pagination: createPaginationMeta(page, limit, total),
+    });
   } catch (error) {
     next(error);
   }

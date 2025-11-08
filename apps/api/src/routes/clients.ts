@@ -2,7 +2,8 @@ import express from 'express';
 import { z } from 'zod';
 import { AppDataSource } from '../data-source.js';
 import { Client } from '../entities/Client.js';
-import { requireAuth } from '../middleware/clerk.js';
+import { requireAuth } from '../middleware/auth.js';
+import { parsePaginationParams, createPaginationMeta } from '../types/pagination.js';
 
 export const clientsRouter = express.Router();
 
@@ -23,19 +24,28 @@ const updateClientSchema = z.object({
   company: z.string().max(255).optional().nullable(),
 });
 
-// GET /api/clients - List all clients for authenticated user
+// GET /api/clients - List all clients for authenticated user (with pagination)
 clientsRouter.get('/', requireAuth, async (req, res, next) => {
   try {
     const userId = (req as any).userId;
     const clientRepo = AppDataSource.getRepository(Client);
 
+    // Parse pagination parameters
+    const { page, limit } = parsePaginationParams(req.query);
+    const skip = (page - 1) * limit;
+
     // Multi-tenancy: Only get clients for this user (Issue #2)
-    const clients = await clientRepo.find({
+    const [clients, total] = await clientRepo.findAndCount({
       where: { user_id: userId },
       order: { created_at: 'DESC' },
+      skip,
+      take: limit,
     });
 
-    res.json({ data: clients });
+    res.json({
+      data: clients,
+      pagination: createPaginationMeta(page, limit, total),
+    });
   } catch (error) {
     next(error);
   }

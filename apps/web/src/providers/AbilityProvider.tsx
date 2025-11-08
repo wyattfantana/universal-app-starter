@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { useAuth, useUser } from '@clerk/clerk-react';
+import { useSession } from '../lib/auth';
 import { AbilityContext } from '../lib/ability-context';
 import { defineAbilitiesFor, type AppAbility, type UserRole } from '../lib/ability';
 
@@ -8,24 +8,24 @@ interface Props {
 }
 
 export function AbilityProvider({ children }: Props) {
-  const { isSignedIn } = useAuth();
-  const { user } = useUser();
+  const { data: session } = useSession();
   const [ability, setAbility] = useState<AppAbility | null>(null);
 
   useEffect(() => {
-    if (isSignedIn && user) {
-      // Get user role from Clerk metadata or default to 'user'
-      const role = (user.publicMetadata?.role as UserRole) || 'user';
+    if (session?.user) {
+      // Get user role from Better Auth or default to 'user'
+      // In the future, you can add role management to Better Auth
+      const role: UserRole = 'user'; // Default role for now
 
       const userAbility = defineAbilitiesFor({
-        id: user.id,
+        id: session.user.id,
         role,
-        email: user.primaryEmailAddress?.emailAddress,
+        email: session.user.email,
       });
 
       setAbility(userAbility);
     }
-  }, [isSignedIn, user]);
+  }, [session]);
 
   if (!ability) {
     return <>{children}</>;

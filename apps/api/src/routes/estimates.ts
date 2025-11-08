@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { AppDataSource } from '../data-source.js';
 import { Estimate } from '../entities/Estimate.js';
 import { EstimateItem } from '../entities/EstimateItem.js';
-import { requireAuth } from '../middleware/clerk.js';
+import { requireAuth } from '../middleware/auth.js';
+import { parsePaginationParams, createPaginationMeta } from '../types/pagination.js';
 
 export const estimatesRouter = express.Router();
 
@@ -25,19 +26,28 @@ const createEstimateSchema = z.object({
   items: z.array(estimateItemSchema).optional(),
 });
 
-// GET /api/estimates
+// GET /api/estimates (with pagination)
 estimatesRouter.get('/', requireAuth, async (req, res, next) => {
   try {
     const userId = (req as any).userId;
     const estimateRepo = AppDataSource.getRepository(Estimate);
 
-    const estimates = await estimateRepo.find({
+    // Parse pagination parameters
+    const { page, limit } = parsePaginationParams(req.query);
+    const skip = (page - 1) * limit;
+
+    const [estimates, total] = await estimateRepo.findAndCount({
       where: { user_id: userId },
       relations: ['client', 'items'],
       order: { created_at: 'DESC' },
+      skip,
+      take: limit,
     });
 
-    res.json({ data: estimates });
+    res.json({
+      data: estimates,
+      pagination: createPaginationMeta(page, limit, total),
+    });
   } catch (error) {
     next(error);
   }

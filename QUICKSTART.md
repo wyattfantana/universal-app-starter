@@ -1,12 +1,11 @@
-# Universal App Starter - Quick Start
+# QuoteMaster - Quick Start
 
 Get running in 5 minutes!
 
 ## 1. Install Dependencies
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/universal-app-starter.git my-app
-cd my-app
+cd /home/dwdec/Projects/quotemaster
 npm install
 ```
 
@@ -14,7 +13,7 @@ npm install
 
 ```bash
 # Create database
-createdb myapp
+createdb quotemaster
 
 # Create .env file
 cp apps/api/.env.example apps/api/.env
@@ -23,7 +22,7 @@ cp apps/api/.env.example apps/api/.env
 Edit `apps/api/.env`:
 ```bash
 POSTGRES_HOST=localhost
-POSTGRES_DB=myapp
+POSTGRES_DB=quotemaster
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 ```

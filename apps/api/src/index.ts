@@ -1,59 +1,65 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 import express from 'express';
+import session from 'express-session';
 import cors from 'cors';
 import helmet from 'helmet';
-import * as Sentry from '@sentry/node';
-import { clerkMiddleware } from '@clerk/express';
+import { init as sentryInit, setupExpressErrorHandler, expressIntegration } from '@sentry/node';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pinoHttp = require('pino-http');
 import { AppDataSource } from './data-source.js';
 import { clientsRouter } from './routes/clients.js';
 import { estimatesRouter } from './routes/estimates.js';
 import { invoicesRouter } from './routes/invoices.js';
 import { productsRouter } from './routes/products.js';
+import { adminRouter } from './routes/admin.js';
+import { authRouter } from './routes/auth.js';
+import { logger, httpLogger } from './logger.js';
 
 // =========================================
 // ENVIRONMENT VARIABLE VALIDATION (Issue #5)
 // =========================================
 const REQUIRED_VARS = ['POSTGRES_HOST', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD'];
-const OPTIONAL_VARS = ['CLERK_SECRET_KEY', 'SENTRY_DSN', 'RESEND_API_KEY', 'STRIPE_SECRET_KEY'];
+const OPTIONAL_VARS = ['SENTRY_DSN', 'RESEND_API_KEY', 'STRIPE_SECRET_KEY', 'GOOGLE_CLIENT_ID', 'FACEBOOK_CLIENT_ID'];
 
-console.log('🔍 Validating environment variables...');
+logger.info('Validating environment variables...');
 let hasErrors = false;
 
 REQUIRED_VARS.forEach(varName => {
   if (!process.env[varName]) {
-    console.error(`❌ Missing required environment variable: ${varName}`);
+    logger.error({ variable: varName }, 'Missing required environment variable');
     hasErrors = true;
   }
 });
 
 if (hasErrors) {
-  console.error('\n⛔ Cannot start server without required environment variables');
-  console.error('Please check your .env file and ensure all required variables are set.');
+  logger.fatal('Cannot start server without required environment variables. Please check your .env file.');
   process.exit(1);
 }
 
 OPTIONAL_VARS.forEach(varName => {
   if (!process.env[varName]) {
-    console.warn(`⚠️  Optional environment variable not set: ${varName}`);
+    logger.warn({ variable: varName }, 'Optional environment variable not set');
   }
 });
 
-console.log('✅ Environment variables validated\n');
+logger.info('Environment variables validated');
 
 // =========================================
 // SENTRY INITIALIZATION (Issue #6)
 // =========================================
 const SENTRY_DSN = process.env.SENTRY_DSN;
 if (SENTRY_DSN) {
-  Sentry.init({
+  sentryInit({
     dsn: SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    integrations: [expressIntegration()],
   });
-  console.log('✅ Sentry initialized');
+  logger.info('Sentry initialized');
 } else {
-  console.warn('⚠️  Sentry not configured (SENTRY_DSN missing)');
+  logger.warn('Sentry not configured (SENTRY_DSN missing)');
 }
 
 const app = express();
@@ -63,11 +69,8 @@ const PORT = process.env.PORT || 3001;
 // SECURITY MIDDLEWARE
 // =========================================
 
-// Sentry request handler (must be first)
-if (SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
-}
+// HTTP request logging (should be early in the middleware chain)
+app.use(pinoHttp({ logger: httpLogger }));
 
 // Helmet for security headers (Issue #26)
 app.use(helmet({
@@ -100,7 +103,7 @@ app.use(cors({
     if (ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      logger.warn({ origin }, 'CORS blocked origin');
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -109,43 +112,100 @@ app.use(cors({
 
 app.use(express.json());
 
-// Clerk authentication middleware (Issue #1)
-// This adds auth context to all requests
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
-if (CLERK_SECRET_KEY) {
-  app.use(clerkMiddleware());
-  console.log('✅ Clerk middleware initialized');
-} else {
-  console.warn('⚠️  Clerk not configured - authentication disabled');
-}
+// Session middleware for admin authentication
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    httpOnly: true,
+    maxAge: 30 * 60 * 1000, // 30 minutes
+    sameSite: 'strict',
+  },
+}));
+
+// Better Auth is configured in auth.ts and exposed via /api/auth routes
+// Authentication middleware is applied per-route in route handlers
+logger.info('Better Auth configured - authentication available at /api/auth/*');
 
 // =========================================
 // HEALTH CHECK (no auth required)
 // =========================================
 app.get('/health', async (req, res) => {
-  try {
-    // Test database connection
-    await AppDataSource.query('SELECT NOW()');
+  const checks: any = {
+    database: { healthy: false, message: '' },
+    typeorm: { healthy: false, message: '' },
+    auth: { healthy: false, message: '' },
+    sentry: { healthy: false, message: '' },
+  };
 
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      database: 'connected',
-      typeorm: AppDataSource.isInitialized ? 'initialized' : 'not initialized',
-    });
+  // Database connectivity check
+  try {
+    const result = await AppDataSource.query('SELECT NOW() as time');
+    checks.database.healthy = true;
+    checks.database.message = 'Connected';
+    checks.database.responseTime = result[0]?.time ? 'OK' : 'Unknown';
   } catch (error) {
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      database: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    checks.database.healthy = false;
+    checks.database.message = error instanceof Error ? error.message : 'Connection failed';
   }
+
+  // TypeORM initialization check
+  checks.typeorm.healthy = AppDataSource.isInitialized;
+  checks.typeorm.message = AppDataSource.isInitialized ? 'Initialized' : 'Not initialized';
+
+  // Better Auth check (checks if OAuth providers are configured)
+  const hasGoogleAuth = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
+  const hasFacebookAuth = !!process.env.FACEBOOK_CLIENT_ID && !!process.env.FACEBOOK_CLIENT_SECRET;
+  checks.auth.healthy = true; // Email/password is always available
+  checks.auth.message = 'Email/password enabled';
+  if (hasGoogleAuth || hasFacebookAuth) {
+    const providers = [];
+    if (hasGoogleAuth) providers.push('Google');
+    if (hasFacebookAuth) providers.push('Facebook');
+    checks.auth.message += `, OAuth: ${providers.join(', ')}`;
+  }
+
+  // Sentry check
+  if (SENTRY_DSN) {
+    checks.sentry.healthy = true;
+    checks.sentry.message = 'Configured';
+  } else {
+    checks.sentry.healthy = false;
+    checks.sentry.message = 'Not configured (optional)';
+  }
+
+  // Determine overall health
+  const isHealthy = checks.database.healthy && checks.typeorm.healthy;
+  const statusCode = isHealthy ? 200 : 503;
+
+  res.status(statusCode).json({
+    status: isHealthy ? 'healthy' : 'unhealthy',
+    timestamp: new Date().toISOString(),
+    version: 'v1',
+    environment: process.env.NODE_ENV || 'development',
+    checks,
+  });
 });
 
 // =========================================
 // API ROUTES (all require authentication via requireAuth middleware)
 // =========================================
+
+// Admin routes (obscure path for security, separate auth system)
+app.use('/system/control', adminRouter);
+
+// Authentication routes (Better Auth)
+app.use('/api/auth', authRouter);
+
+// API v1 routes
+app.use('/api/v1/clients', clientsRouter);
+app.use('/api/v1/estimates', estimatesRouter);
+app.use('/api/v1/invoices', invoicesRouter);
+app.use('/api/v1/products', productsRouter);
+
+// Legacy routes (redirect to v1 for backward compatibility)
 app.use('/api/clients', clientsRouter);
 app.use('/api/estimates', estimatesRouter);
 app.use('/api/invoices', invoicesRouter);
@@ -184,13 +244,13 @@ app.get('*', (req, res) => {
 
 // Sentry error handler (must be before other error handlers)
 if (SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
+  setupExpressErrorHandler(app);
 }
 
 // Global error handler (Issue #4 - hide stack traces in production)
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   // Log full error server-side
-  console.error('❌ Error:', err);
+  logger.error({ err, path: req.path, method: req.method }, 'Request error');
 
   const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -208,22 +268,22 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 // GRACEFUL SHUTDOWN (Issue #27)
 // =========================================
 process.on('SIGTERM', async () => {
-  console.log('\n🛑 SIGTERM received, shutting down gracefully...');
+  logger.info('SIGTERM received, shutting down gracefully...');
 
   if (AppDataSource.isInitialized) {
     await AppDataSource.destroy();
-    console.log('✅ Database connection closed');
+    logger.info('Database connection closed');
   }
 
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('\n🛑 SIGINT received, shutting down gracefully...');
+  logger.info('SIGINT received, shutting down gracefully...');
 
   if (AppDataSource.isInitialized) {
     await AppDataSource.destroy();
-    console.log('✅ Database connection closed');
+    logger.info('Database connection closed');
   }
 
   process.exit(0);
@@ -234,23 +294,28 @@ process.on('SIGINT', async () => {
 // =========================================
 async function bootstrap() {
   try {
-    console.log('🔌 Connecting to database...');
+    logger.info('Connecting to database...');
     await AppDataSource.initialize();
-    console.log('✅ Database connected (TypeORM initialized)');
+    logger.info('Database connected (TypeORM initialized)');
 
     app.listen(PORT, () => {
-      console.log(`\n🚀 API server running on http://localhost:${PORT}`);
-      console.log(`📚 Health check: http://localhost:${PORT}/health\n`);
+      logger.info({ port: PORT, url: `http://localhost:${PORT}` }, 'API server running');
+      logger.info({ healthCheck: `http://localhost:${PORT}/health` }, 'Health check available');
 
       // Show security status
-      console.log('🔐 Security Status:');
-      console.log(`  - Authentication: ${CLERK_SECRET_KEY ? '✅ Enabled' : '❌ Disabled'}`);
-      console.log(`  - Error Tracking: ${SENTRY_DSN ? '✅ Enabled' : '⚠️  Disabled'}`);
-      console.log(`  - CORS Origins: ${ALLOWED_ORIGINS.length} configured`);
-      console.log(`  - Environment: ${process.env.NODE_ENV || 'development'}\n`);
+      const authMethods = ['Email/Password'];
+      if (process.env.GOOGLE_CLIENT_ID) authMethods.push('Google OAuth');
+      if (process.env.FACEBOOK_CLIENT_ID) authMethods.push('Facebook OAuth');
+
+      logger.info({
+        authentication: authMethods.join(', '),
+        errorTracking: SENTRY_DSN ? 'enabled' : 'disabled',
+        corsOrigins: ALLOWED_ORIGINS.length,
+        environment: process.env.NODE_ENV || 'development',
+      }, 'Security status');
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.fatal({ err: error }, 'Failed to start server');
     process.exit(1);
   }
 }

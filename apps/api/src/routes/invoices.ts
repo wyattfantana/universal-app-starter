@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { AppDataSource } from '../data-source.js';
 import { Invoice } from '../entities/Invoice.js';
 import { InvoiceItem } from '../entities/InvoiceItem.js';
-import { requireAuth } from '../middleware/clerk.js';
+import { requireAuth } from '../middleware/auth.js';
+import { parsePaginationParams, createPaginationMeta } from '../types/pagination.js';
 
 export const invoicesRouter = express.Router();
 
@@ -26,19 +27,28 @@ const createInvoiceSchema = z.object({
   items: z.array(invoiceItemSchema).optional(),
 });
 
-// GET /api/invoices
+// GET /api/invoices (with pagination)
 invoicesRouter.get('/', requireAuth, async (req, res, next) => {
   try {
     const userId = (req as any).userId;
     const invoiceRepo = AppDataSource.getRepository(Invoice);
 
-    const invoices = await invoiceRepo.find({
+    // Parse pagination parameters
+    const { page, limit } = parsePaginationParams(req.query);
+    const skip = (page - 1) * limit;
+
+    const [invoices, total] = await invoiceRepo.findAndCount({
       where: { user_id: userId },
       relations: ['client', 'items'],
       order: { created_at: 'DESC' },
+      skip,
+      take: limit,
     });
 
-    res.json({ data: invoices });
+    res.json({
+      data: invoices,
+      pagination: createPaginationMeta(page, limit, total),
+    });
   } catch (error) {
     next(error);
   }
